@@ -1,0 +1,513 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="header-with-actions">
+        <h1><i class="fas fa-newspaper"></i> Správa blogu</h1>
+        <button class="btn" onclick="showBlogForm()">
+            <i class="fas fa-plus"></i> Nový článek
+        </button>
+    </div>
+
+    <div class="blog-grid">
+        {% for slug, post in blog_posts.items() %}
+        <div class="blog-card">
+            <h3>{{ post.title }}</h3>
+            <p class="post-date">{{ post.date }}</p>
+            <div class="post-actions">
+                <button class="btn" onclick="editPost('{{ slug }}')">
+                    <i class="fas fa-edit"></i> Upravit
+                </button>
+                <button class="btn btn-danger" onclick="deletePost('{{ post.id }}')">
+                    <i class="fas fa-trash"></i> Smazat
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div id="blog-form" class="card" style="display: none;">
+    <div class="header-with-actions">
+        <h2 id="form-title">Nový článek</h2>
+        <button class="btn btn-danger" onclick="hideBlogForm()">
+            <i class="fas fa-times"></i> Zavřít
+        </button>
+    </div>
+
+    <form id="post-form" onsubmit="savePost(event)">
+        <input type="hidden" id="post-id">
+        
+        <div class="form-group">
+            <label for="post-title">Název článku:</label>
+            <input type="text" id="post-title" class="form-control" required>
+        </div>
+        
+        <div id="editor">
+            <div class="editor-toolbar">
+                <button type="button" onclick="addBlock('text')" class="toolbar-btn">
+                    <i class="fas fa-paragraph"></i> Text
+                </button>
+                <button type="button" onclick="addBlock('image')" class="toolbar-btn">
+                    <i class="fas fa-image"></i> Obrázek
+                </button>
+                <button type="button" onclick="addBlock('gallery')" class="toolbar-btn">
+                    <i class="fas fa-images"></i> Galerie
+                </button>
+            </div>
+            
+            <div id="blocks-container" class="blocks-container"></div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn">
+                <i class="fas fa-save"></i> Uložit
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+.blog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.blog-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.post-date {
+    color: #666;
+    font-size: 0.875rem;
+    margin: 0.5rem 0 1rem;
+}
+
+.post-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.editor-toolbar {
+    background: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.toolbar-btn {
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: var(--transition-smooth);
+}
+
+.toolbar-btn:hover {
+    background: #e9ecef;
+}
+
+.blocks-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: 200px;
+    margin-bottom: 1.5rem;
+}
+
+.content-block {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 1rem;
+    position: relative;
+}
+
+.block-toolbar {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.block-toolbar button {
+    padding: 0.25rem;
+    background: rgba(0,0,0,0.1);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #666;
+    transition: var(--transition-smooth);
+}
+
+.block-toolbar button:hover {
+    background: rgba(0,0,0,0.2);
+    color: #333;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.gallery-item {
+    aspect-ratio: 1;
+    position: relative;
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.gallery-item .remove-image {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    background: rgba(255,255,255,0.9);
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #dc3545;
+    transition: var(--transition-smooth);
+}
+
+.gallery-item .remove-image:hover {
+    background: white;
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .blog-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .editor-toolbar {
+        justify-content: center;
+    }
+    
+    .toolbar-btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentBlocks = [];
+const posts = {{ blog_posts|tojson }};
+
+function showBlogForm() {
+    currentBlocks = [];
+    document.getElementById('form-title').textContent = 'Nový článek';
+    document.getElementById('post-id').value = '';
+    document.getElementById('post-title').value = '';
+    document.getElementById('blocks-container').innerHTML = '';
+    document.getElementById('blog-form').style.display = 'block';
+}
+
+function hideBlogForm() {
+    document.getElementById('blog-form').style.display = 'none';
+}
+
+function addBlock(type) {
+    const block = { type, id: Date.now() };
+    
+    if (type === 'text') {
+        block.data = { text: '' };
+    } else if (type === 'image') {
+        block.data = { url: '' };
+    } else if (type === 'gallery') {
+        block.data = { images: [] };
+    }
+    
+    currentBlocks.push(block);
+    renderBlock(block);
+}
+
+function renderBlock(block) {
+    const container = document.createElement('div');
+    container.className = 'content-block';
+    container.dataset.blockId = block.id;
+    
+    const toolbar = `
+        <div class="block-toolbar">
+            <button type="button" onclick="moveBlock(${block.id}, 'up')" title="Posunout nahoru">
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            <button type="button" onclick="moveBlock(${block.id}, 'down')" title="Posunout dolů">
+                <i class="fas fa-arrow-down"></i>
+            </button>
+            <button type="button" onclick="removeBlock(${block.id})" title="Odstranit">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    let content = '';
+    if (block.type === 'text') {
+        content = `
+            <textarea class="form-control" 
+                      onchange="updateBlockData(${block.id}, 'text', this.value)" 
+                      rows="4"
+                      placeholder="Zadejte text...">${block.data.text || ''}</textarea>
+        `;
+    } else if (block.type === 'image') {
+        content = `
+            <div>
+                <input type="file" class="form-control" 
+                       onchange="uploadBlockImage(${block.id}, this.files[0])"
+                       accept="image/*">
+                ${block.data.filename ? 
+                    `<div class="image-preview">
+                        <img src="${block.data.url}" alt="Preview" style="max-width: 100%; margin-top: 0.5rem;">
+                        <small class="text-muted">Soubor: ${block.data.filename}</small>
+                    </div>` : ''}
+            </div>
+        `;
+    } else if (block.type === 'gallery') {
+        content = `
+            <div>
+                <input type="file" class="form-control" 
+                       onchange="uploadGalleryImages(${block.id}, this.files)"
+                       accept="image/*"
+                       multiple>
+                <small class="text-muted">Můžete vybrat více obrázků najednou pro přidání do galerie</small>
+                <div class="gallery-grid">
+                    ${(block.data.images || []).map(img => `
+                        <div class="gallery-item">
+                            <img src="${img.url}" alt="Gallery image">
+                            <button type="button" class="remove-image" onclick="removeGalleryImage(${block.id}, '${img.filename}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = toolbar + content;
+    document.getElementById('blocks-container').appendChild(container);
+}
+
+async function uploadBlockImage(blockId, file) {
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    try {
+        const response = await fetch('/admin/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const block = currentBlocks.find(b => b.id === blockId);
+            if (block) {
+                block.data.url = data.url;
+                block.data.filename = file.name;
+                
+                // Re-render the block to show the uploaded image
+                const container = document.querySelector(`[data-block-id="${blockId}"]`);
+                if (container) {
+                    currentBlocks = currentBlocks.filter(b => b.id !== blockId);
+                    container.remove();
+                    currentBlocks.push(block);
+                    renderBlock(block);
+                }
+            }
+        } else {
+            alert('Chyba při nahrávání obrázku');
+        }
+    } catch (error) {
+        console.error('Error uploading image:', error);
+        alert('Chyba při nahrávání obrázku');
+    }
+}
+
+async function uploadGalleryImages(blockId, files) {
+    if (!files || !files.length) return;
+    
+    const block = currentBlocks.find(b => b.id === blockId);
+    if (!block) return;
+    
+    if (!block.data.images) block.data.images = [];
+    
+    // Convert FileList to Array for easier handling
+    const filesArray = Array.from(files);
+    
+    // Upload all files in parallel
+    const uploadPromises = filesArray.map(async (file) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        try {
+            const response = await fetch('/admin/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                return {
+                    url: data.url,
+                    filename: file.name
+                };
+            }
+        } catch (error) {
+            console.error('Error uploading image:', error);
+        }
+        return null;
+    });
+    
+    try {
+        const results = await Promise.all(uploadPromises);
+        
+        // Filter out any failed uploads and add successful ones to the gallery
+        const successfulUploads = results.filter(result => result !== null);
+        block.data.images.push(...successfulUploads);
+        
+        // Re-render the block to show the updated gallery
+        const container = document.querySelector(`[data-block-id="${blockId}"]`);
+        if (container) {
+            currentBlocks = currentBlocks.filter(b => b.id !== blockId);
+            container.remove();
+            currentBlocks.push(block);
+            renderBlock(block);
+        }
+    } catch (error) {
+        console.error('Error uploading images:', error);
+        alert('Chyba při nahrávání některých obrázků');
+    }
+}
+
+async function removeGalleryImage(blockId, filename) {
+    const block = currentBlocks.find(b => b.id === blockId);
+    if (block) {
+        block.data.images = block.data.images.filter(img => img.filename !== filename);
+        
+        // Re-render block
+        const container = document.querySelector(`[data-block-id="${blockId}"]`);
+        if (container) {
+            currentBlocks = currentBlocks.filter(b => b.id !== blockId);
+            container.remove();
+            currentBlocks.push(block);
+            renderBlock(block);
+        }
+    }
+}
+
+function updateBlockData(blockId, key, value) {
+    const block = currentBlocks.find(b => b.id === blockId);
+    if (block) {
+        block.data[key] = value;
+    }
+}
+
+function removeBlock(blockId) {
+    currentBlocks = currentBlocks.filter(b => b.id !== blockId);
+    document.querySelector(`[data-block-id="${blockId}"]`).remove();
+}
+
+function moveBlock(blockId, direction) {
+    const index = currentBlocks.findIndex(b => b.id === blockId);
+    if (index === -1) return;
+    
+    if (direction === 'up' && index > 0) {
+        [currentBlocks[index], currentBlocks[index - 1]] = [currentBlocks[index - 1], currentBlocks[index]];
+    } else if (direction === 'down' && index < currentBlocks.length - 1) {
+        [currentBlocks[index], currentBlocks[index + 1]] = [currentBlocks[index + 1], currentBlocks[index]];
+    }
+    
+    document.getElementById('blocks-container').innerHTML = '';
+    currentBlocks.forEach(renderBlock);
+}
+
+function editPost(slug) {
+    const post = posts[slug];
+    if (!post) return;
+    
+    document.getElementById('form-title').textContent = 'Upravit článek';
+    document.getElementById('post-id').value = post.id;
+    document.getElementById('post-title').value = post.title;
+    
+    currentBlocks = post.content;
+    document.getElementById('blocks-container').innerHTML = '';
+    currentBlocks.forEach(renderBlock);
+    
+    document.getElementById('blog-form').style.display = 'block';
+}
+
+async function savePost(event) {
+    event.preventDefault();
+    
+    const data = {
+        id: document.getElementById('post-id').value || undefined,
+        title: document.getElementById('post-title').value,
+        content: currentBlocks
+    };
+    
+    const response = await fetch('/admin/api/blog/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    });
+    
+    if (response.ok) {
+        window.location.reload();
+    } else {
+        alert('Chyba při ukládání článku');
+    }
+}
+
+async function deletePost(id) {
+    if (!confirm('Opravdu chcete smazat tento článek?')) {
+        return;
+    }
+    
+    const response = await fetch('/admin/api/blog/delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id })
+    });
+    
+    if (response.ok) {
+        window.location.reload();
+    } else {
+        alert('Chyba při mazání článku');
+    }
+}
+</script>
+{% endblock %}

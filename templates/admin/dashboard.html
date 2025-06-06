@@ -1,0 +1,238 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="card stats-card">
+        <h2><i class="fas fa-chart-line"></i> Přehled</h2>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <i class="fas fa-box"></i>
+                <div class="stat-info">
+                    <h3>{{ products|length }}</h3>
+                    <p>Produktů</p>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-newspaper"></i>
+                <div class="stat-info">
+                    <h3>{{ posts|length }}</h3>
+                    <p>Článků</p>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-tags"></i>
+                <div class="stat-info">
+                    <h3>{{ tags|length }}</h3>
+                    <p>Štítků</p>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-copyright"></i>
+                <div class="stat-info">
+                    <h3>{{ brands|length }}</h3>
+                    <p>Značek</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sub-grid">
+        <div class="card">
+            <h2><i class="fas fa-tags"></i> Používané štítky</h2>
+            <div class="tag-cloud">
+                {% for tag in tags %}
+                <span class="tag">
+                    {{ tag.name }}
+                    <small>({{ tag.products|length }})</small>
+                </span>
+                {% endfor %}
+            </div>
+            <div class="card-actions">
+                <a href="/admin/tags" class="btn">Spravovat štítky</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2><i class="fas fa-copyright"></i> Značky</h2>
+            <div class="tag-cloud">
+                {% for brand in brands %}
+                <span class="tag brand">
+                    {{ brand.name }}
+                    <small>({{ brand.products|length }})</small>
+                </span>
+                {% endfor %}
+            </div>
+            <div class="card-actions">
+                <a href="/admin/tags" class="btn">Spravovat značky</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2><i class="fas fa-clock"></i> Nedávné změny</h2>
+        <div class="recent-activity">
+            {% for product in products[:5] %}
+            <div class="activity-item">
+                <i class="fas fa-box"></i>
+                <div>
+                    <h4>{{ product.name }}</h4>
+                    <p>{{ product.created_at.strftime('%d. %m. %Y %H:%M') }}</p>
+                </div>
+            </div>
+            {% endfor %}
+            
+            {% for post in posts[:5] %}
+            <div class="activity-item">
+                <i class="fas fa-newspaper"></i>
+                <div>
+                    <h4>{{ post.title }}</h4>
+                    <p>{{ post.created_at.strftime('%d. %m. %Y %H:%M') }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.dashboard-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: rgba(0,0,0,0.02);
+    border-radius: 8px;
+    transition: var(--transition-smooth);
+}
+
+.stat-item:hover {
+    background: rgba(0,0,0,0.04);
+    transform: translateY(-2px);
+}
+
+.stat-item i {
+    font-size: 2rem;
+    color: var(--color-moss);
+    opacity: 0.8;
+}
+
+.stat-info h3 {
+    font-size: 1.5rem;
+    margin: 0;
+    color: var(--color-bark);
+}
+
+.stat-info p {
+    margin: 0;
+    color: #666;
+}
+
+.sub-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.tag {
+    background: #E8F5E9;
+    color: var(--color-forest);
+    padding: 0.25rem 0.75rem;
+    border-radius: 16px;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tag small {
+    opacity: 0.7;
+}
+
+.tag.brand {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+.card-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.recent-activity {
+    margin-top: 1rem;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-item i {
+    font-size: 1.2rem;
+    color: var(--color-moss);
+    opacity: 0.8;
+}
+
+.activity-item h4 {
+    margin: 0;
+    color: var(--color-bark);
+}
+
+.activity-item p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #666;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .stat-item {
+        padding: 1rem;
+    }
+    
+    .stat-item i {
+        font-size: 1.5rem;
+    }
+    
+    .stat-info h3 {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

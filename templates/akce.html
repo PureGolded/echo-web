@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero">
+    <h1>Akce</h1>
+    <p>Aktuální speciální nabídky a slevy</p>
+</div>
+
+<div class="promo-list">
+    {% for post in posts %}
+    <article class="promo-card">
+        {% set first_image = post.get_first_image() %}
+        {% if first_image %}
+        <div class="promo-image">
+            <img src="{{ url_for('uploaded_file', filename=first_image) }}" 
+                 alt="{{ post.title }}"
+                 class="preview-image">
+            <div class="discount-badge">AKCE</div>
+        </div>
+        {% endif %}
+        <div class="promo-content">
+            <h2><a href="{{ url_for('akce_detail', slug=post.slug) }}">{{ post.title }}</a></h2>            <div class="post-meta">
+                <span class="date">Platnost do: {% if post.expiration_date %}{{ post.expiration_date.strftime('%d. %m. %Y') }}{% else %}neurčito{% endif %}</span>
+            </div>
+            <a href="{{ url_for('akce_detail', slug=post.slug) }}" class="read-more">Zobrazit detaily</a>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+
+<style>
+.promo-list {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.promo-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+    backdrop-filter: blur(8px);
+    border: 2px solid transparent;
+}
+
+.promo-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    border-color: var(--color-orange-light);
+}
+
+.promo-image {
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    position: relative;
+}
+
+.discount-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--color-orange);
+    color: white;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transform: rotate(5deg);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+}
+
+.preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.promo-card:hover .preview-image {
+    transform: scale(1.05);
+}
+
+.promo-content {
+    padding: 1.5rem;
+}
+
+.promo-content h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.25rem;
+    color: var(--color-orange-dark);
+}
+
+.promo-content h2 a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.post-meta {
+    color: #666;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.read-more {
+    display: inline-block;
+    color: var(--color-orange);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.read-more:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .promo-list {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+</style>
+{% endblock %}

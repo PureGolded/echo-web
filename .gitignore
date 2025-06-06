@@ -1,0 +1,4 @@
+__pycache__
+*.code-workspace
+todo.md
+instance/echoshop.db

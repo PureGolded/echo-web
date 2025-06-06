@@ -1,0 +1,216 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="header-with-actions">
+        <h1><i class="fas fa-tags"></i> Správa štítků a značek</h1>
+    </div>
+    
+    <div class="grid">
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-tag"></i> Štítky produktů</h2>
+                <p class="text-muted">Štítky pro kategorizaci produktů</p>
+            </div>
+            
+            <div class="tag-manager">
+                <div class="tag-list" id="tags-list">
+                    {% for tag in tags %}
+                    <div class="tag">
+                        {{ tag.name }}
+                        <span>({{ tag.count }})</span>
+                        <button onclick="removeTag('{{ tag.name }}')" title="Odstranit štítek">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="add-new-form">
+                    <div class="input-with-button">
+                        <input type="text" class="form-control" id="new-tag" placeholder="Název nového štítku">
+                        <button class="btn" onclick="addTag()">
+                            <i class="fas fa-plus"></i> Přidat
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-copyright"></i> Značky</h2>
+                <p class="text-muted">Značky výrobců a dodavatelů</p>
+            </div>
+            
+            <div class="tag-manager">
+                <div class="tag-list" id="brands-list">
+                    {% for brand in brands %}
+                    <div class="tag brand">
+                        {{ brand.name }}
+                        <span>({{ brand.count }})</span>
+                        <button onclick="removeBrand('{{ brand.name }}')" title="Odstranit značku">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="add-new-form">
+                    <div class="input-with-button">
+                        <input type="text" class="form-control" id="new-brand" placeholder="Název nové značky">
+                        <button class="btn" onclick="addBrand()">
+                            <i class="fas fa-plus"></i> Přidat
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.header-with-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.header-with-actions h1 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--color-bark);
+}
+
+.card-header {
+    margin-bottom: 1.5rem;
+}
+
+.card-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-bark);
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.text-muted {
+    color: #6B7280;
+    font-size: 0.875rem;
+}
+
+.tag-manager {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.tag-list {
+    min-height: 100px;
+    padding: 0.5rem;
+    background: #F9FAFB;
+    border-radius: 6px;
+    border: 1px dashed #E5E7EB;
+}
+
+.add-new-form {
+    margin-top: 1rem;
+}
+
+.input-with-button {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.input-with-button .form-control {
+    flex: 1;
+}
+
+.input-with-button .btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+}
+
+@media (max-width: 640px) {
+    .input-with-button {
+        flex-direction: column;
+    }
+    
+    .input-with-button .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let tags = {{ tags|map(attribute='name')|list|tojson }};
+let brands = {{ brands|map(attribute='name')|list|tojson }};
+
+async function updateTags() {
+    const response = await fetch('/admin/api/tags/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tags, brands })
+    });
+    
+    if (response.ok) {
+        window.location.reload();
+    } else {
+        alert('Chyba při aktualizaci štítků');
+    }
+}
+
+function addTag() {
+    const input = document.getElementById('new-tag');
+    const value = input.value.trim();
+    if (!value) return;
+    
+    if (!tags.includes(value)) {
+        tags = [...tags, value];
+        updateTags();
+    }
+}
+
+function removeTag(tag) {
+    if (!confirm(`Opravdu chcete smazat štítek "${tag}"?`)) return;
+    tags = tags.filter(t => t !== tag);
+    updateTags();
+}
+
+function addBrand() {
+    const input = document.getElementById('new-brand');
+    const value = input.value.trim();
+    if (!value) return;
+    
+    if (!brands.includes(value)) {
+        brands = [...brands, value];
+        updateTags();
+    }
+}
+
+function removeBrand(brand) {
+    if (!confirm(`Opravdu chcete smazat značku "${brand}"?`)) return;
+    brands = brands.filter(b => b !== brand);
+    updateTags();
+}
+
+// Enter key support for inputs
+document.getElementById('new-tag').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') addTag();
+});
+
+document.getElementById('new-brand').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') addBrand();
+});
+</script>
+{% endblock %}

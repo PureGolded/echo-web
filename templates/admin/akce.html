@@ -1,0 +1,594 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="header-with-actions">
+        <h1><i class="fas fa-tags"></i> Správa akčních nabídek</h1>
+        <button class="btn" onclick="showPromoForm()">
+            <i class="fas fa-plus"></i> Nová akce
+        </button>
+    </div>
+
+    <div class="promo-grid">
+        {% for slug, post in blog_posts.items() %}
+        <div class="promo-card">
+            <div class="promo-badge">AKCE</div>
+            <h3>{{ post.title }}</h3>
+            <p class="post-date">Platnost do: {{ post.date }}</p>
+            <div class="post-actions">
+                <button class="btn" onclick="editPost('{{ slug }}')">
+                    <i class="fas fa-edit"></i> Upravit
+                </button>
+                <button class="btn btn-danger" onclick="deletePost('{{ post.id }}')">
+                    <i class="fas fa-trash"></i> Smazat
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div id="blog-form" class="card" style="display: none;">
+    <div class="header-with-actions">
+        <h2 id="form-title">Nová akce</h2>
+        <button class="btn btn-danger" onclick="hideBlogForm()">
+            <i class="fas fa-times"></i> Zavřít
+        </button>
+    </div>    <form id="post-form" onsubmit="savePost(event)">
+        <input type="hidden" id="post-id">
+        
+        <div class="form-group">
+            <label for="post-title">Název akce:</label>
+            <input type="text" id="post-title" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="post-expiration">Platnost do:</label>
+            <input type="date" id="post-expiration" class="form-control">
+            <small class="form-text">Ponechte prázdné pro akci bez omezení platnosti</small>
+        </div>
+        
+        <div id="editor">
+            <div class="editor-toolbar">
+                <button type="button" onclick="addBlock('text')" class="toolbar-btn">
+                    <i class="fas fa-paragraph"></i> Text
+                </button>
+                <button type="button" onclick="addBlock('image')" class="toolbar-btn">
+                    <i class="fas fa-image"></i> Obrázek
+                </button>
+                <button type="button" onclick="addBlock('gallery')" class="toolbar-btn">
+                    <i class="fas fa-images"></i> Galerie
+                </button>
+            </div>
+            
+            <div id="blocks-container" class="blocks-container"></div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn">
+                <i class="fas fa-save"></i> Uložit
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+.promo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.promo-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.05);
+    border-left: 4px solid var(--color-orange);
+    position: relative;
+}
+
+.promo-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: var(--color-orange);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+.post-date {
+    color: #666;
+    font-size: 0.875rem;
+    margin: 0.5rem 0 1rem;
+}
+
+.post-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.editor-toolbar {
+    background: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.toolbar-btn {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.toolbar-btn:hover {
+    background-color: #f1f1f1;
+}
+
+.blocks-container {
+    min-height: 200px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.block {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    background-color: #fcfcfc;
+}
+
+.block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.block-title {
+    font-weight: 500;
+    color: #666;
+}
+
+.block-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #999;
+    font-size: 0.9rem;
+}
+
+.block-actions button:hover {
+    color: #333;
+}
+
+.text-editor {
+    width: 100%;
+    min-height: 100px;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+}
+
+.image-upload {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.preview-container {
+    position: relative;
+    max-width: 200px;
+}
+
+.preview-container img {
+    max-width: 100%;
+    border-radius: 4px;
+}
+
+.remove-image {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    background: rgba(255,0,0,0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gallery-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.gallery-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .promo-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Keep the existing JavaScript but update the function names
+// We can reuse the same functions for the blog/akce functionality
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize the editor
+    setupEditor();
+});
+
+let currentBlocks = [];
+
+function showPromoForm() {
+    document.getElementById('form-title').textContent = 'Nová akce';
+    document.getElementById('post-form').reset();
+    document.getElementById('post-id').value = '';
+    currentBlocks = [];
+    renderBlocks();
+    document.getElementById('blog-form').style.display = 'block';
+}
+
+function hideBlogForm() {
+    document.getElementById('blog-form').style.display = 'none';
+}
+
+function setupEditor() {
+    renderBlocks();
+}
+
+function renderBlocks() {
+    const container = document.getElementById('blocks-container');
+    container.innerHTML = '';
+    
+    if (currentBlocks.length === 0) {
+        container.innerHTML = '<div class="empty-state">Klikněte na tlačítka výše pro přidání obsahu</div>';
+        return;
+    }
+    
+    currentBlocks.forEach((block, index) => {
+        const blockElement = document.createElement('div');
+        blockElement.className = 'block';
+        
+        const blockHeader = document.createElement('div');
+        blockHeader.className = 'block-header';
+        
+        const blockTitle = document.createElement('div');
+        blockTitle.className = 'block-title';
+        blockTitle.textContent = getBlockTypeLabel(block.type);
+        
+        const blockActions = document.createElement('div');
+        blockActions.className = 'block-actions';
+        
+        const moveUpBtn = document.createElement('button');
+        moveUpBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+        moveUpBtn.title = 'Posunout nahoru';
+        moveUpBtn.onclick = () => moveBlockUp(index);
+        moveUpBtn.disabled = index === 0;
+        
+        const moveDownBtn = document.createElement('button');
+        moveDownBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
+        moveDownBtn.title = 'Posunout dolů';
+        moveDownBtn.onclick = () => moveBlockDown(index);
+        moveDownBtn.disabled = index === currentBlocks.length - 1;
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        deleteBtn.title = 'Odstranit';
+        deleteBtn.onclick = () => deleteBlock(index);
+        
+        blockActions.appendChild(moveUpBtn);
+        blockActions.appendChild(moveDownBtn);
+        blockActions.appendChild(deleteBtn);
+        
+        blockHeader.appendChild(blockTitle);
+        blockHeader.appendChild(blockActions);
+        
+        blockElement.appendChild(blockHeader);
+        
+        const blockContent = document.createElement('div');
+        blockContent.className = 'block-content';
+        
+        if (block.type === 'text') {
+            const textarea = document.createElement('textarea');
+            textarea.className = 'text-editor';
+            textarea.value = block.data.text || '';
+            textarea.placeholder = 'Zadejte text...';
+            textarea.onchange = (e) => {
+                block.data.text = e.target.value;
+            };
+            blockContent.appendChild(textarea);
+        } else if (block.type === 'image') {
+            const imageUpload = document.createElement('div');
+            imageUpload.className = 'image-upload';
+            
+            if (block.data.filename) {
+                const previewContainer = document.createElement('div');
+                previewContainer.className = 'preview-container';
+                
+                const preview = document.createElement('img');
+                preview.src = `/uploads/${block.data.filename}`;
+                preview.alt = 'Preview';
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-image';
+                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                removeBtn.onclick = () => {
+                    block.data.filename = null;
+                    renderBlocks();
+                };
+                
+                previewContainer.appendChild(preview);
+                previewContainer.appendChild(removeBtn);
+                imageUpload.appendChild(previewContainer);
+            } else {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/*';
+                fileInput.onchange = (e) => uploadImage(e.target.files[0], (filename) => {
+                    block.data.filename = filename;
+                    renderBlocks();
+                });
+                
+                const label = document.createElement('label');
+                label.textContent = 'Vyberte obrázek:';
+                
+                imageUpload.appendChild(label);
+                imageUpload.appendChild(fileInput);
+            }
+            
+            blockContent.appendChild(imageUpload);
+        } else if (block.type === 'gallery') {
+            const galleryEditor = document.createElement('div');
+            galleryEditor.className = 'gallery-editor';
+            
+            const galleryImages = document.createElement('div');
+            galleryImages.className = 'gallery-images';
+            
+            if (block.data.images && block.data.images.length > 0) {
+                block.data.images.forEach((image, imageIndex) => {
+                    if (image.filename) {
+                        const previewContainer = document.createElement('div');
+                        previewContainer.className = 'preview-container';
+                        
+                        const preview = document.createElement('img');
+                        preview.src = `/uploads/${image.filename}`;
+                        preview.alt = 'Gallery image';
+                        
+                        const removeBtn = document.createElement('button');
+                        removeBtn.className = 'remove-image';
+                        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                        removeBtn.onclick = () => {
+                            block.data.images.splice(imageIndex, 1);
+                            renderBlocks();
+                        };
+                        
+                        previewContainer.appendChild(preview);
+                        previewContainer.appendChild(removeBtn);
+                        galleryImages.appendChild(previewContainer);
+                    }
+                });
+            }
+            
+            galleryEditor.appendChild(galleryImages);
+            
+            const addImageBtn = document.createElement('button');
+            addImageBtn.className = 'btn';
+            addImageBtn.innerHTML = '<i class="fas fa-plus"></i> Přidat další obrázek';
+            addImageBtn.onclick = () => {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/*';
+                fileInput.style.display = 'none';
+                fileInput.onchange = (e) => {
+                    if (e.target.files.length > 0) {
+                        uploadImage(e.target.files[0], (filename) => {
+                            if (!block.data.images) block.data.images = [];
+                            block.data.images.push({ filename });
+                            renderBlocks();
+                        });
+                    }
+                };
+                document.body.appendChild(fileInput);
+                fileInput.click();
+                document.body.removeChild(fileInput);
+            };
+            
+            galleryEditor.appendChild(addImageBtn);
+            blockContent.appendChild(galleryEditor);
+        }
+        
+        blockElement.appendChild(blockContent);
+        container.appendChild(blockElement);
+    });
+}
+
+function getBlockTypeLabel(type) {
+    switch(type) {
+        case 'text': return 'Text';
+        case 'image': return 'Obrázek';
+        case 'gallery': return 'Galerie';
+        default: return type;
+    }
+}
+
+function addBlock(type) {
+    let block = { type, data: {} };
+    
+    if (type === 'text') {
+        block.data.text = '';
+    } else if (type === 'image') {
+        block.data.filename = null;
+    } else if (type === 'gallery') {
+        block.data.images = [];
+    }
+    
+    currentBlocks.push(block);
+    renderBlocks();
+}
+
+function moveBlockUp(index) {
+    if (index > 0) {
+        const temp = currentBlocks[index];
+        currentBlocks[index] = currentBlocks[index - 1];
+        currentBlocks[index - 1] = temp;
+        renderBlocks();
+    }
+}
+
+function moveBlockDown(index) {
+    if (index < currentBlocks.length - 1) {
+        const temp = currentBlocks[index];
+        currentBlocks[index] = currentBlocks[index + 1];
+        currentBlocks[index + 1] = temp;
+        renderBlocks();
+    }
+}
+
+function deleteBlock(index) {
+    currentBlocks.splice(index, 1);
+    renderBlocks();
+}
+
+function uploadImage(file, callback) {
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    fetch('/admin/api/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.url) {
+            // Extract filename from url
+            const filename = data.url.split('/').pop();
+            callback(filename);
+        }
+    })
+    .catch(error => {
+        console.error('Error uploading image:', error);
+        alert('Nastala chyba při nahrávání obrázku.');
+    });
+}
+
+function editPost(slug) {
+    fetch(`/api/blog/get/${slug}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('form-title').textContent = 'Upravit akci';
+            document.getElementById('post-id').value = data.post.id;
+            document.getElementById('post-title').value = data.post.title;
+            
+            // Handle expiration date
+            const expirationDateInput = document.getElementById('post-expiration');
+            if (data.post.expiration_date) {
+                // Format date as YYYY-MM-DD for the input field
+                const date = new Date(data.post.expiration_date);
+                const formattedDate = date.toISOString().split('T')[0];
+                expirationDateInput.value = formattedDate;
+            } else {
+                expirationDateInput.value = '';
+            }
+            
+            currentBlocks = data.post.content;
+            renderBlocks();
+            document.getElementById('blog-form').style.display = 'block';
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching post:', error);
+        alert('Nastala chyba při načítání akce.');
+    });
+}
+
+function savePost(event) {
+    event.preventDefault();
+    
+    const postId = document.getElementById('post-id').value;
+    const title = document.getElementById('post-title').value;
+    const expirationDate = document.getElementById('post-expiration').value;
+      const data = {
+        title,
+        content: currentBlocks,
+        expiration_date: expirationDate || null,
+        id: postId || null
+    };
+    
+    fetch('/admin/api/blog/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Akce byla úspěšně uložena.');
+            window.location.reload();
+        } else {
+            alert('Nastala chyba při ukládání akce: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error saving post:', error);
+        alert('Nastala chyba při ukládání akce.');
+    });
+}
+
+function deletePost(id) {
+    if (confirm('Opravdu chcete smazat tuto akci?')) {
+        fetch('/admin/api/blog/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Akce byla úspěšně smazána.');
+                window.location.reload();
+            } else {
+                alert('Nastala chyba při mazání akce.');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting post:', error);
+            alert('Nastala chyba při mazání akce.');
+        });
+    }
+}
+</script>
+{% endblock %}

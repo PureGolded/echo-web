@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="blog-post">
+    <h1>{{ post.title }}</h1>
+    <div class="post-meta">
+        <span class="date">{{ post.created_at.strftime('%d. %B %Y') }}</span>
+    </div>
+    
+    <div class="post-content">
+        {% for block in post.content %}
+            {% if block.type == 'text' %}
+                <div class="text-block">{{ block.data.text }}</div>
+            {% elif block.type == 'image' %}
+                <div class="image-block">
+                    <img src="{{ url_for('uploaded_file', filename=block.data.filename) }}" 
+                         alt="Article image"
+                         class="article-image">
+                </div>
+            {% elif block.type == 'gallery' %}
+                <div class="gallery-block">
+                    <div class="gallery-grid">
+                        {% for image in block.data.images %}
+                            <div class="gallery-item">
+                                <img src="{{ url_for('uploaded_file', filename=image.filename) }}" 
+                                     alt="Gallery image"
+                                     class="gallery-image">
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.blog-post {
+    background: rgba(255, 255, 255, 0.95);
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.post-meta {
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.text-block {
+    margin: 1.5rem 0;
+    line-height: 1.6;
+}
+
+.image-block {
+    margin: 2rem 0;
+}
+
+.article-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+.gallery-block {
+    margin: 2rem 0;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.gallery-item {
+    aspect-ratio: 1;
+}
+
+.gallery-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+    .blog-post {
+        padding: 1rem;
+    }
+    
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

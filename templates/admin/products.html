@@ -1,0 +1,389 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>Správa produktů</h1>
+        <button class="btn" onclick="showProductForm()">Nový produkt</button>
+    </div>
+
+    <div class="filters-container">
+        <div class="search-box">
+            <input type="text" id="product-search" placeholder="Hledat produkt..." class="form-control">
+            <button class="btn" onclick="clearSearch()"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <div class="filter-options">
+            <div class="filter-group">
+                <label for="category-filter">Kategorie:</label>
+                <select id="category-filter" class="form-control">
+                    <option value="">Všechny kategorie</option>
+                    {% for key, translation in Category.TRANSLATIONS.items() %}
+                    <option value="{{ key }}">{{ translation }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="brand-filter">Značka:</label>
+                <select id="brand-filter" class="form-control">
+                    <option value="">Všechny značky</option>
+                    {% for brand in brands %}
+                    <option value="{{ brand.name }}">{{ brand.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="tag-filter">Štítek:</label>
+                <select id="tag-filter" class="form-control">
+                    <option value="">Všechny štítky</option>
+                    {% for tag in tags %}
+                    <option value="{{ tag.name }}">{{ tag.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button class="btn" onclick="resetFilters()">Resetovat filtry</button>
+        </div>
+    </div>
+
+    <div class="products-stats">
+        <span id="products-count">Zobrazeno: <strong>{{ products|length }}</strong> produktů</span>
+    </div>
+
+    <div id="products-list">
+        {% for product in products %}
+        <div class="card product-card" 
+             data-id="{{ product.id }}"
+             data-name="{{ product.name }}"
+             data-category="{{ product.category }}"
+             data-brand="{{ product.brand.name }}"
+             data-tags="{{ product.tags|map(attribute='name')|join(',') }}">
+            <div style="display: flex; gap: 1rem;">
+                <img src="{% if product.image.startswith('http') %}{{ product.image }}{% else %}{{ url_for('uploaded_file', filename=product.image) }}{% endif %}" 
+                     alt="{{ product.name }}" 
+                     style="width: 100px; height: 100px; object-fit: cover;">
+                <div style="flex: 1;">
+                    <h3>{{ product.name }}</h3>
+                    <p class="product-description">{{ product.description }}</p>
+                    <div class="tag-list">
+                        <span class="tag">{{ product.category_translated }}</span>
+                        {% for tag in product.tags %}
+                        <span class="tag">{{ tag.name }}</span>
+                        {% endfor %}
+                        <span class="tag brand">{{ product.brand.name }}</span>
+                        {% if product.price %}
+                        <span class="tag price">{{ "%.2f"|format(product.price) }} Kč</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <button class="btn" onclick="editProduct('{{ product.id }}')">Upravit</button>
+                    <button class="btn btn-danger" onclick="deleteProduct('{{ product.id }}')">Smazat</button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div id="no-products-message" style="display: none; text-align: center; padding: 2rem;">
+        <h3>Žádné produkty nebyly nalezeny</h3>
+        <p>Zkuste změnit filtr nebo vyhledávací dotaz</p>
+    </div>
+</div>
+
+<div id="product-form" class="card" style="display: none;">
+    <h2 id="form-title">Nový produkt</h2>
+    <form id="product-form" onsubmit="saveProduct(event)" enctype="multipart/form-data">
+        <input type="hidden" id="product-id" name="id">
+        
+        <div class="form-group">
+            <label for="product-name">Název:</label>
+            <input type="text" id="product-name" name="name" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="product-description">Popis:</label>
+            <textarea id="product-description" name="description" class="form-control" rows="3" required></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="product-category">Kategorie:</label>
+            <select id="product-category" name="category" class="form-control" required>
+                {% for key, translation in Category.TRANSLATIONS.items() %}
+                <option value="{{ key }}">{{ translation }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Štítky:</label>
+            <div class="tag-selection">
+                {% for tag in tags %}
+                <label class="tag-option">
+                    <input type="checkbox" name="tags" value="{{ tag.name }}">
+                    {{ tag.name }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="product-brand">Značka:</label>
+            <select id="product-brand" name="brand" class="form-control" required>
+                {% for brand in brands %}
+                <option value="{{ brand.name }}">{{ brand.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="product-price">Cena (nepovinné):</label>
+            <input type="number" id="product-price" name="price" class="form-control" step="0.01">
+        </div>
+        
+        <div class="form-group">
+            <label for="product-image">Obrázek:</label>
+            <input type="file" id="product-image" name="image" class="form-control" accept="image/*">
+            <small class="text-muted">Současný obrázek zůstane pokud nový nebude vybrán</small>
+        </div>
+        
+        <div class="form-group">
+            <button type="submit" class="btn">Uložit</button>
+            <button type="button" class="btn btn-danger" onclick="hideProductForm()">Zrušit</button>
+        </div>
+    </form>
+</div>
+
+<style>
+.product-card {
+    margin-bottom: 1rem;
+}
+.product-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+}
+.tag-selection {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+.tag-option {
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+.tag.brand {
+    background: #e3f2fd;
+}
+.tag.price {
+    background: #c3e6cb;
+}
+
+/* Filter styles */
+.filters-container {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 0.25rem;
+    border: 1px solid #e9ecef;
+}
+
+.search-box {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.search-box input {
+    flex: 1;
+}
+
+.search-box button {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.filter-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.products-stats {
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+@media (max-width: 768px) {
+    .filter-group {
+        min-width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const products = {{ products|tojson }};
+const categoryTranslations = {{ Category.TRANSLATIONS|tojson }};
+
+function showProductForm() {
+    document.getElementById('form-title').textContent = 'Nový produkt';
+    document.getElementById('product-id').value = '';
+    document.getElementById('product-name').value = '';
+    document.getElementById('product-description').value = '';
+    document.getElementById('product-category').value = 'bow';
+    document.getElementById('product-brand').value = '';
+    document.getElementById('product-price').value = '';
+    document.getElementById('product-image').value = '';
+    document.querySelectorAll('input[name="tags"]').forEach(cb => cb.checked = false);
+    const form = document.getElementById('product-form');
+    form.style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideProductForm() {
+    document.getElementById('product-form').style.display = 'none';
+}
+
+function editProduct(id) {
+    // Convert the id to a number since it comes as a string from onclick
+    const numId = parseInt(id);
+    const product = products.find(p => p.id === numId);
+    
+    if (!product) {
+        console.error("Product not found with ID:", id);
+        return;
+    }
+
+    document.getElementById('form-title').textContent = 'Upravit produkt';
+    document.getElementById('product-id').value = id;
+    document.getElementById('product-name').value = product.name;
+    document.getElementById('product-description').value = product.description;
+    document.getElementById('product-category').value = product.category;
+    document.getElementById('product-brand').value = product.brand.name;
+    document.getElementById('product-price').value = product.price || '';
+    
+    document.querySelectorAll('input[name="tags"]').forEach(cb => {
+        cb.checked = product.tags.some(tag => tag.name === cb.value);
+    });
+    
+    const form = document.getElementById('product-form');
+    form.style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function saveProduct(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    
+    const response = await fetch('/admin/api/product/save', {
+        method: 'POST',
+        body: formData
+    });
+    
+    if (response.ok) {
+        window.location.reload();
+    } else {
+        alert('Chyba při ukládání produktu');
+    }
+}
+
+async function deleteProduct(id) {
+    if (!confirm('Opravdu chcete smazat tento produkt?')) {
+        return;
+    }
+    
+    const response = await fetch('/admin/api/product/delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id })
+    });
+    
+    if (response.ok) {
+        window.location.reload();
+    } else {
+        alert('Chyba při mazání produktu');
+    }
+}
+
+// Filter and search functionality
+function filterProducts() {
+    const searchTerm = document.getElementById('product-search').value.toLowerCase();
+    const categoryFilter = document.getElementById('category-filter').value;
+    const brandFilter = document.getElementById('brand-filter').value;
+    const tagFilter = document.getElementById('tag-filter').value;
+    
+    const productCards = document.querySelectorAll('.product-card');
+    let visibleCount = 0;
+    
+    productCards.forEach(card => {
+        const name = card.getAttribute('data-name').toLowerCase();
+        const category = card.getAttribute('data-category');
+        const brand = card.getAttribute('data-brand');
+        const tags = card.getAttribute('data-tags').split(',');
+        
+        const matchesSearch = searchTerm === '' || name.includes(searchTerm);
+        const matchesCategory = categoryFilter === '' || category === categoryFilter;
+        const matchesBrand = brandFilter === '' || brand === brandFilter;
+        const matchesTag = tagFilter === '' || tags.includes(tagFilter);
+        
+        const isVisible = matchesSearch && matchesCategory && matchesBrand && matchesTag;
+        card.style.display = isVisible ? 'block' : 'none';
+        
+        if (isVisible) visibleCount++;
+    });
+    
+    // Update counter and visibility of no products message
+    document.getElementById('products-count').innerHTML = `Zobrazeno: <strong>${visibleCount}</strong> produktů`;
+    document.getElementById('no-products-message').style.display = visibleCount === 0 ? 'block' : 'none';
+}
+
+function clearSearch() {
+    document.getElementById('product-search').value = '';
+    filterProducts();
+}
+
+function resetFilters() {
+    document.getElementById('product-search').value = '';
+    document.getElementById('category-filter').value = '';
+    document.getElementById('brand-filter').value = '';
+    document.getElementById('tag-filter').value = '';
+    filterProducts();
+}
+
+// Add event listeners for filters
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('product-search').addEventListener('input', filterProducts);
+    document.getElementById('category-filter').addEventListener('change', filterProducts);
+    document.getElementById('brand-filter').addEventListener('change', filterProducts);
+    document.getElementById('tag-filter').addEventListener('change', filterProducts);
+});
+</script>
+{% endblock %}
